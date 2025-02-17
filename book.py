@@ -2,16 +2,6 @@ import re
 from collections import UserDict
 
 
-def validate_phone(phone: str):
-    """Нормалізує та превіряє номер телефону."""
-    cleaned_phone = re.sub(r"\D+", "", phone)
-
-    if len(cleaned_phone) != 10:
-        raise ValueError(f"Invalid phone: {cleaned_phone}")
-    
-    return cleaned_phone
-
-
 class Field:
     def __init__(self, value):
         self.value = value
@@ -25,8 +15,21 @@ class Name(Field):
 
 
 class Phone(Field):
-    def __init__(self, phone: str):
-        super().__init__(validate_phone(phone))
+    def __init__(self, value: str):
+        super().__init__(value)
+        self._validate_phone()
+
+    def _validate_phone(self):
+        """Перевіряє коректність номера телефону та нормалізує його."""
+        # Якщо номер містить літери – це явно не телефон (наприклад, 123хх456789)
+        if any(d.isalpha() for d in str(self.value)):
+            raise ValueError(f"Invalid phone number: {self.value}. It contains invalid characters.")
+
+        phone = re.sub(r"\D+", "", self.value)
+        if len(phone) != 10:
+            raise ValueError(f"Invalid phone number: {phone}. The number must be 10 digits long.")
+        
+        self.value = phone
 
 
 class Record:
@@ -67,7 +70,9 @@ class Record:
         return None
 
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
+        mask = "({0}{1}{2})-{3}{4}{5}-{6}{7}-{8}{9}"  # Так буде ще красивіше виводитись номер
+        phones_str = '; '.join(mask.format(*p.value) for p in self.phones)
+        return f"Contact name: {self.name.value}, phones: {phones_str}"
 
 
 class AddressBook(UserDict):
@@ -91,3 +96,39 @@ class AddressBook(UserDict):
     
     def __str__(self):
         return "\n".join(str(self.data[name]) for name in sorted(self.data)) or "Address book is empty."
+
+
+try:
+    book = AddressBook()
+
+    # Створення запису для John
+    john_record = Record("John")
+    john_record.add_phone("(123)456-78-90")
+    john_record.add_phone("5555555555")
+
+    # Додавання запису John до адресної книги
+    book.add_record(john_record)
+
+    # Створення та додавання нового запису для Jane
+    jane_record = Record("Jane")
+    jane_record.add_phone("9876543210")
+    book.add_record(jane_record)
+
+    # Виведення всіх записів у книзі
+     
+    print(book)
+
+    # Знаходження та редагування телефону для John
+    john = book.find("John")
+    john.edit_phone("1234567890", "1112223333")
+
+    print(john)  # Виведення: Contact name: John, phones: 1112223333; 5555555555
+
+    # Пошук конкретного телефону у записі John
+    found_phone = john.find_phone("5555555555")
+    print(f"{john.name}: {found_phone}")  # Виведення: John: 5555555555
+
+    # Видалення запису Jane
+    book.delete("Jane")
+except Exception as e:
+    print(e)
