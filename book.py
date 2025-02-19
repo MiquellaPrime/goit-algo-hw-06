@@ -16,20 +16,13 @@ class Name(Field):
 
 class Phone(Field):
     def __init__(self, value: str):
+        self._validate_phone(value) 
         super().__init__(value)
-        self._validate_phone()
 
-    def _validate_phone(self):
-        """Перевіряє коректність номера телефону та нормалізує його."""
-        # Якщо номер містить літери – це явно не телефон (наприклад, 123хх456789)
-        if any(d.isalpha() for d in str(self.value)):
-            raise ValueError(f"Invalid phone number: {self.value}. It contains invalid characters.")
-
-        phone = re.sub(r"\D+", "", self.value)
-        if len(phone) != 10:
-            raise ValueError(f"Invalid phone number: {phone}. The number must be 10 digits long.")
-        
-        self.value = phone
+    def _validate_phone(self, value: str):
+        """Перевіряє коректність номера телефону."""
+        if not (len(value) == 10 and value.isdigit()):
+            raise ValueError(f"Invalid phone number: {value!r}. The number must be 10 digits long.")
 
 
 class Record:
@@ -40,7 +33,7 @@ class Record:
     def add_phone(self, phone: str):
         """Додає новий телефон до запису."""
         if self.find_phone(phone) is not None:
-            raise ValueError(f"Phone number '{phone}' already exists.")
+            raise ValueError(f"Phone number {phone!r} already exists.")
         
         self.phones.append(Phone(phone))
 
@@ -48,7 +41,7 @@ class Record:
         """Видаляє телефон із запису."""
         found_phone = self.find_phone(phone)
         if found_phone is None:
-            raise ValueError(f"Phone number '{phone}' not found.")
+            raise ValueError(f"Phone number {phone!r} not found.")
         
         self.phones.remove(found_phone)
 
@@ -59,7 +52,7 @@ class Record:
                 self.phones[i] = Phone(new)
                 return
         
-        raise ValueError(f"Phone number '{old}' not found.")
+        raise ValueError(f"Phone number {old!r} not found.")
 
     def find_phone(self, phone: str) -> Phone | None:
         """Шукає телефон у записі."""
@@ -79,7 +72,7 @@ class AddressBook(UserDict):
     def add_record(self, record: Record):
         """Додає запис до адресної книги."""
         if record.name.value in self.data:
-            raise KeyError(f"Record for '{record.name.value}' already exists.")
+            raise KeyError(f"Record for {record.name.value!r} already exists.")
         
         self.data[record.name.value] = record
     
@@ -90,7 +83,7 @@ class AddressBook(UserDict):
     def delete(self, name: str) -> Record:
         """Видаляє запис, повертаючи видалене значення."""
         if self.find(name) is None:
-            raise KeyError(f"Name '{name}' not found.")
+            raise KeyError(f"Name {name!r} not found.")
         
         return self.data.pop(name)
     
